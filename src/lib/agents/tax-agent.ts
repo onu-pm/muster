@@ -147,6 +147,12 @@ export async function runTaxAgent(
           kind: "declaration_proof_ineligible",
           conclusion: `${decl.personName}: ${gate.reason}`,
           confidence: 1, // certain, deterministic finding — not a guess
+          payload: {
+            personId: decl.personId,
+            personName: decl.personName,
+            evidence: { category: proof.category, claimedAmount: proof.claimedAmount, regime: decl.regime },
+            ruleApplied: `${rule.label} (${rule.section}) — regime eligibility / landlord PAN check, before any document is read`,
+          },
         });
         exceptionsOpened += 1;
         proofsRejected += 1;
@@ -235,6 +241,18 @@ financial year? Reply with ONLY a JSON object, no other text:
           kind: "declaration_proof_unverified",
           conclusion: `${decl.personName}: ${rule.label} proof — ${parsed.reason}`,
           confidence: parsed.confidence,
+          payload: {
+            personId: decl.personId,
+            personName: decl.personName,
+            evidence: {
+              category: proof.category,
+              claimedAmount: proof.claimedAmount,
+              documentSummary: proof.documentSummary,
+              artifactId: artifact.id,
+              modelOutcome: parsed.outcome,
+            },
+            ruleApplied: `${rule.label} (${rule.section}) — ${rule.rule}`,
+          },
         });
         exceptionsOpened += 1;
       }

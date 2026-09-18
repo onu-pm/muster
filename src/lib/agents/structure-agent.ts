@@ -209,6 +209,7 @@ much, moved into basic or DA. Reply with ONLY a JSON object, no other text:
         output: parsed,
       });
 
+      const minRatioUsed = wageDefinitionOverride?.minRatio ?? 0.5;
       await openException(db, {
         dutyInstanceId,
         kind: "wage_definition_breach",
@@ -216,6 +217,14 @@ much, moved into basic or DA. Reply with ONLY a JSON object, no other text:
           parsed.correction ??
           `${row.personName}: basic + DA is ${(test.ratio * 100).toFixed(1)}% of gross, below the statutory 50% minimum.`,
         confidence: parsed.confidence,
+        payload: {
+          personId: row.personId,
+          personName: row.personName,
+          evidence: { structure: row.newStructure, basicWage: test.basicWage, grossWage: test.grossWage, ratio: test.ratio },
+          ruleApplied: wageDefinitionOverride
+            ? `Confirmed org wage-definition rule (${jurisdiction}) — must be ≥ ${(minRatioUsed * 100).toFixed(0)}% of gross`
+            : `Statutory 50% wage-definition test (basic + DA / gross) — no confirmed override for ${jurisdiction}`,
+        },
       });
     }
   }

@@ -138,6 +138,14 @@ ONLY a JSON object, no other text: {"explanation": string | null, "confidence": 
           parsed.explanation ??
           `${diff.personName}: ${diff.delta} day delta between attendance and leave records, no confirmed fact explains it.`,
         confidence: parsed.confidence,
+        payload: {
+          personId: diff.personId,
+          personName: diff.personName,
+          evidence: { attendanceDays: diff.actual, leaveDays: diff.expected, delta: diff.delta },
+          ruleApplied: `Attendance-vs-leave reconciliation for ${cycleLabel} — checked against ${
+            (facts ?? []).length
+          } confirmed fact(s) on file, none explained this delta`,
+        },
       });
       exceptionsOpened += 1;
     }

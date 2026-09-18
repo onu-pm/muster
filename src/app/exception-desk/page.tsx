@@ -25,7 +25,9 @@ export default async function ExceptionDeskPage() {
 
   const { data: exceptions, error } = await db
     .from("exceptions")
-    .select("id, kind, conclusion, confidence, status, opened_at, duty_instance_id, duty_instances(org_id)")
+    .select(
+      "id, kind, conclusion, confidence, status, opened_at, payload, duty_instance_id, duty_instances(org_id, duty_type)"
+    )
     .eq("status", "open")
     .order("opened_at", { ascending: true })
     .limit(50);
@@ -39,16 +41,42 @@ export default async function ExceptionDeskPage() {
       <h1>Exception desk</h1>
       {(!exceptions || exceptions.length === 0) && <p className="text-muted">Clear. Nothing waiting on a decision.</p>}
       <div className="card-list">
-        {exceptions?.map((e: any) => (
-          <div key={e.id} className="card">
-            <div className="tag">{e.kind}</div>
-            <p style={{ margin: "8px 0" }}>{e.conclusion}</p>
-            <div className="text-muted" style={{ fontSize: 13, marginBottom: 12 }}>
-              Confidence: {(e.confidence * 100).toFixed(0)}%
+        {exceptions?.map((e: any) => {
+          const payload = e.payload ?? {};
+          const isProposedRule = e.kind === "proposed_rule";
+          const subject = payload.personName ?? (isProposedRule ? "Company-wide calculation rule" : null);
+          const evidence = payload.evidence ?? (isProposedRule ? payload.definition : null);
+          const ruleApplied =
+            payload.ruleApplied ??
+            (isProposedRule ? `${payload.scope ?? "policy"} rule, ${payload.jurisdiction ?? "—"}` : null);
+
+          return (
+            <div key={e.id} className="card">
+              <div className="tag">{e.kind}</div>
+              {subject && (
+                <div style={{ fontWeight: 600, marginTop: 8 }}>{subject}</div>
+              )}
+              <p style={{ margin: "8px 0" }}>{e.conclusion}</p>
+              {evidence && (
+                <div className="text-muted" style={{ fontSize: 13, marginBottom: 4 }}>
+                  <strong>What was found:</strong>{" "}
+                  {Object.entries(evidence)
+                    .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
+                    .join(" · ")}
+                </div>
+              )}
+              {ruleApplied && (
+                <div className="text-muted" style={{ fontSize: 13, marginBottom: 4 }}>
+                  <strong>Rule applied:</strong> {ruleApplied}
+                </div>
+              )}
+              <div className="text-muted" style={{ fontSize: 13, marginBottom: 12 }}>
+                Confidence: {(e.confidence * 100).toFixed(0)}%
+              </div>
+              <DecideButtons exceptionId={e.id} orgId={e.duty_instances?.org_id} />
             </div>
-            <DecideButtons exceptionId={e.id} orgId={e.duty_instances?.org_id} />
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
