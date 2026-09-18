@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { supabaseSession, currentOrg } from "@/lib/supabase/session";
 import { isTeamEnabled, PAYROLL_TEAM_KEY } from "@/lib/teams";
 import { describeDuty, currentCycleLabel } from "@/lib/duty-labels";
-import { RunCycle } from "./run-cycle";
+import { GoalBox } from "./goal-box";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +96,7 @@ export default async function TeamPage() {
         ))}
       </div>
 
-      <RunCycle orgId={org!.orgId} cycleLabel={currentCycleLabel()} />
+      <GoalBox orgId={org!.orgId} cycleLabel={currentCycleLabel()} />
     </div>
   );
 }
