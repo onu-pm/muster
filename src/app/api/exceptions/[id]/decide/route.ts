@@ -71,6 +71,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         label?: string;
         scope?: "statutory" | "policy";
         jurisdiction?: string;
+        ruleKey?: string | null;
         definition?: Record<string, unknown>;
       };
       const source = body.correctionNote
@@ -82,6 +83,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         scope: payload.scope ?? "policy",
         jurisdiction: payload.jurisdiction ?? "IN-national",
         effective_from: new Date().toISOString().slice(0, 10),
+        rule_key: payload.ruleKey ?? null,
+        label: payload.label ?? null,
         definition: payload.definition ?? {},
         source,
         confirmed: true,

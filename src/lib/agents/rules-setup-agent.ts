@@ -1,6 +1,17 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { llmClient, callJudgmentModel, MODEL_JUDGMENT } from "@/lib/llm/client";
 import { logStep, openException } from "@/lib/capabilities/execute";
+import { parseWageDefinitionOverride, parseProofCategoryCapOverride } from "@/lib/capabilities/rules-lookup";
+
+/** Re-validates a self-tagged rule_key against its required shape before
+ * it's shown as "wired" on the exception desk — the model claiming a key
+ * doesn't make the definition actually match it, and rules-lookup.ts will
+ * independently re-check this anyway at consumption time regardless. */
+function validateRuleKey(ruleKey: string | null | undefined, definition: unknown): string | null {
+  if (ruleKey === "wage_definition" && parseWageDefinitionOverride(definition)) return ruleKey;
+  if (ruleKey === "proof_category_cap" && parseProofCategoryCapOverride(definition)) return ruleKey;
+  return null;
+}
 
 export interface RulesSetupResult {
   dutyInstanceId: string;
@@ -27,12 +38,15 @@ export interface RulesSetupResult {
  * configuration a mistake in which reaches every payslip, not a judgment
  * call worth trusting to one model pass.
  *
- * What this does NOT do yet: nothing in Structure or Tax's deterministic
- * calculation code (wage-test.ts, tax-rates.ts) reads confirmed rules
- * back out. This is the capture-and-confirm half of the loop; wiring each
- * capability to check `rules` before falling back to the generic
- * statutory defaults is the next, separate piece of work — one capability
- * at a time, not all at once, so each one stays testable.
+ * Consumption: structure-agent.ts and tax-agent.ts now read confirmed
+ * rules back out (capabilities/rules-lookup.ts), but only for a small,
+ * closed set of rule_keys they already know how to validate —
+ * 'wage_definition' (Structure) and 'proof_category_cap' (Tax). Extraction
+ * tags a candidate with one of these ONLY when the sheet maps onto it
+ * unambiguously; everything else still lands on the exception desk and,
+ * once confirmed, still lives in `rules` for a human to read — it's just
+ * not wired to a calculation. Widening that set is future work, one
+ * capability at a time, not all at once, so each one stays testable.
  */
 export async function runRulesSetupAgent(
   db: SupabaseClient,
@@ -67,12 +81,31 @@ Calculation sheet:
 ${sheetText}
 """
 
+Two kinds of rule are wired to an actual calculation right now — tag a
+candidate with the matching rule_key ONLY when it clearly is one of
+these, using EXACTLY this definition shape:
+
+- "wage_definition": overrides the statutory 50% basic+DA test.
+  definition: {"baseComponents": ["basic","da"], "minRatio": 0.5}
+- "proof_category_cap": overrides one income-tax proof category's cap.
+  definition: {"category": one of rent_receipts | lic_ppf_elss |
+  home_loan_principal | home_loan_interest | medical_insurance | nps |
+  lta, "cap": number}
+
+Everything else — PT slabs, CTC breakup percentages, rounding
+conventions, anything not one of the two shapes above — still gets
+extracted and put on the exception desk for the record, just with
+rule_key omitted (null). Do not force a rule into one of these two keys
+if it doesn't actually match; leave rule_key out instead.
+
 Reply with ONLY a JSON array, no other text. Each element:
 {
   "label": "short human name, e.g. 'Karnataka PT slabs'",
   "scope": "statutory" | "policy",
   "jurisdiction": "e.g. IN-KA, or the default above if the sheet doesn't say",
-  "definition": { ...whatever structured shape fits this specific rule... },
+  "rule_key": "wage_definition" | "proof_category_cap" | null,
+  "definition": { ...structured shape fitting this specific rule, or the
+    exact shape above if rule_key is set... },
   "confidence": 0 to 1 — 1 only if the sheet stated this unambiguously
 }
 Return an empty array if nothing extractable is found — never guess to
@@ -89,6 +122,7 @@ produce output.`;
     label: string;
     scope: "statutory" | "policy";
     jurisdiction: string;
+    rule_key?: string | null;
     definition: Record<string, unknown>;
     confidence: number;
   }> = [];
@@ -110,15 +144,19 @@ produce output.`;
 
   for (const candidate of candidates) {
     if (!candidate?.label || !candidate?.definition) continue;
+    const ruleKey = validateRuleKey(candidate.rule_key, candidate.definition);
     await openException(db, {
       dutyInstanceId,
       kind: "proposed_rule",
-      conclusion: `Proposed rule — ${candidate.label} (${candidate.scope ?? "policy"}, ${candidate.jurisdiction ?? jurisdiction})`,
+      conclusion: `Proposed rule — ${candidate.label} (${candidate.scope ?? "policy"}, ${candidate.jurisdiction ?? jurisdiction})${
+        ruleKey ? ` — will apply to ${ruleKey === "wage_definition" ? "Structure's wage test" : "Tax's proof caps"} once confirmed` : ""
+      }`,
       confidence: typeof candidate.confidence === "number" ? candidate.confidence : 0.5,
       payload: {
         label: candidate.label,
         scope: candidate.scope === "statutory" ? "statutory" : "policy",
         jurisdiction: candidate.jurisdiction || jurisdiction,
+        ruleKey,
         definition: candidate.definition,
       },
     });

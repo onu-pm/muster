@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { llmClient, callJudgmentModel, MODEL_JUDGMENT } from "@/lib/llm/client";
 import { checkWageDefinition, computeArrears, type SalaryStructure } from "@/lib/capabilities/wage-test";
 import { logStep, openException } from "@/lib/capabilities/execute";
+import { findConfirmedRule, parseWageDefinitionOverride } from "@/lib/capabilities/rules-lookup";
+import { resolveJurisdiction } from "@/lib/capabilities/jurisdiction";
 
 export interface StructureRevisionRow {
   personId: string;
@@ -73,18 +75,22 @@ export async function runStructureAgent(
   if (dutyError) throw dutyError;
   const dutyInstanceId = duty.id as string;
 
-  // 2. Pull each referenced person's current structure, to diff arrears
-  //    against and to fall back on when a row doesn't supply its own.
+  // 2. Pull each referenced person's current structure (to diff arrears
+  //    against and fall back on) and jurisdiction (to look up a confirmed
+  //    wage_definition rule for their state — see step 3).
   const personIds = [...new Set(revisions.map((r) => r.personId))];
   const currentStructures = new Map<string, SalaryStructure>();
+  const jurisdictionByPerson = new Map<string, string>();
   if (personIds.length > 0) {
     const { data: people, error: peopleError } = await db
       .from("people")
-      .select("id, salary_structure")
+      .select("id, salary_structure, locations(state)")
       .in("id", personIds);
     if (peopleError) throw peopleError;
     for (const p of people ?? []) {
       currentStructures.set(p.id as string, (p.salary_structure ?? {}) as SalaryStructure);
+      const location = p.locations as unknown as { state: string } | null;
+      jurisdictionByPerson.set(p.id as string, resolveJurisdiction(location?.state));
     }
   }
 
@@ -99,7 +105,19 @@ export async function runStructureAgent(
     const fetched = currentStructures.get(row.personId);
     const previousStructure = row.previousStructure ?? (isEmptyStructure(fetched) ? null : fetched) ?? null;
 
-    const test = checkWageDefinition(row.newStructure);
+    // A confirmed org rule for this person's jurisdiction overrides the
+    // built-in wage-definition constants; an invalid or missing one falls
+    // back to the tested default (see capabilities/rules-lookup.ts).
+    const jurisdiction = jurisdictionByPerson.get(row.personId) ?? "IN-national";
+    const ruleDefinition = await findConfirmedRule(db, {
+      orgId,
+      jurisdiction,
+      ruleKey: "wage_definition",
+      asOf: today,
+    });
+    const wageDefinitionOverride = parseWageDefinitionOverride(ruleDefinition);
+
+    const test = checkWageDefinition(row.newStructure, wageDefinitionOverride ?? undefined);
     const arrearAmount = computeArrears({
       previousStructure,
       newStructure: row.newStructure,
@@ -115,6 +133,8 @@ export async function runStructureAgent(
         newStructure: row.newStructure,
         previousStructure,
         effectiveFrom: row.effectiveFrom,
+        jurisdiction,
+        ruleApplied: wageDefinitionOverride ? "confirmed org rule" : "built-in default",
       },
       output: { ...test, arrearAmount },
     });

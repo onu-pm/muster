@@ -20,12 +20,37 @@ const WAGE_TEST_MIN_RATIO = 0.5;
  * LLM involved — a structure either meets the rule or it doesn't. The
  * Structure agent spends a model call only once this has already found a
  * breach, to propose how to fix the split.
+ *
+ * `overrides` lets a caller substitute a confirmed org/jurisdiction rule
+ * (see capabilities/rules-lookup.ts's parseWageDefinitionOverride) for the
+ * built-in constants below — the test itself doesn't know or care where
+ * the numbers came from, it's still the same tested arithmetic either way.
  */
-export function checkWageDefinition(structure: SalaryStructure): WageTestResult {
+/** "basic" should match "Basic", "special allowance" should match
+ * "specialAllowance" — a confirmed rule's component names come from a
+ * human's calculation sheet (or an LLM's reading of one), not from the
+ * salary_structure JSON's own camelCase keys, so exact-key lookup would
+ * silently drop a real match. Comparing case/space-normalised is a
+ * lookup, not a calculation — the actual sum is still exact. */
+function normalizeComponentKey(key: string): string {
+  return key.toLowerCase().replace(/[\s_-]+/g, "");
+}
+
+export function checkWageDefinition(
+  structure: SalaryStructure,
+  overrides?: { baseComponents?: string[]; minRatio?: number }
+): WageTestResult {
+  const baseComponents = overrides?.baseComponents ?? WAGE_BASE_COMPONENTS;
+  const minRatio = overrides?.minRatio ?? WAGE_TEST_MIN_RATIO;
+  const normalizedBaseComponents = new Set(baseComponents.map(normalizeComponentKey));
+
   const grossWage = Object.values(structure).reduce((sum, v) => sum + (v || 0), 0);
-  const basicWage = WAGE_BASE_COMPONENTS.reduce((sum, key) => sum + (structure[key] || 0), 0);
+  const basicWage = Object.entries(structure).reduce(
+    (sum, [key, value]) => (normalizedBaseComponents.has(normalizeComponentKey(key)) ? sum + (value || 0) : sum),
+    0
+  );
   const ratio = grossWage === 0 ? 0 : Number((basicWage / grossWage).toFixed(4));
-  return { basicWage, grossWage, ratio, passed: ratio >= WAGE_TEST_MIN_RATIO };
+  return { basicWage, grossWage, ratio, passed: ratio >= minRatio };
 }
 
 /**

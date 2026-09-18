@@ -4,6 +4,8 @@ import { computeAnnualTax, NEW_REGIME_STANDARD_DEDUCTION, type Regime } from "@/
 import { PROOF_CATEGORY_RULES, checkDeterministic, type ProofCategory } from "@/lib/capabilities/proof-rules";
 import { logStep, openException } from "@/lib/capabilities/execute";
 import { verify } from "@/lib/capabilities/verify";
+import { findAllConfirmedRules, parseProofCategoryCapOverride } from "@/lib/capabilities/rules-lookup";
+import { NATIONAL_JURISDICTION } from "@/lib/capabilities/jurisdiction";
 
 // Old-regime standard deduction — unchanged since its introduction in 2018.
 // Not independently re-verified this pass, unlike the new-regime figures in
@@ -91,6 +93,23 @@ export async function runTaxAgent(
     }
   }
 
+  // Confirmed org overrides for a category's statutory cap (Section 80C/
+  // 80D/24(b) etc.) — always national, not state-varying, unlike
+  // Structure's wage-definition rule. Looked up once per run, not per
+  // proof: a company either has a confirmed override for a category or
+  // it doesn't, and it's the same override for every declaration here.
+  const today = new Date().toISOString().slice(0, 10);
+  const capOverrides = new Map<ProofCategory, number>();
+  for (const definition of await findAllConfirmedRules(db, {
+    orgId,
+    jurisdiction: NATIONAL_JURISDICTION,
+    ruleKey: "proof_category_cap",
+    asOf: today,
+  })) {
+    const parsed = parseProofCategoryCapOverride(definition);
+    if (parsed) capOverrides.set(parsed.category, parsed.cap);
+  }
+
   const anthropic = llmClient();
   let proofsVerified = 0;
   let proofsRejected = 0;
@@ -102,6 +121,7 @@ export async function runTaxAgent(
 
     for (const proof of decl.proofs) {
       const rule = PROOF_CATEGORY_RULES[proof.category];
+      const effectiveCap = capOverrides.get(proof.category) ?? rule.cap;
       declared[proof.category] = (declared[proof.category] ?? 0) + proof.claimedAmount;
 
       // 3. Structured checks first — regime eligibility, landlord PAN.
@@ -154,7 +174,7 @@ declaration proof document for ${decl.personName} (${decl.financialYear}).
 Category: ${rule.label} (${rule.section})
 What a valid proof must show: ${rule.rule}
 Claimed amount: ₹${proof.claimedAmount.toLocaleString("en-IN")}${
-        rule.cap ? ` (statutory cap: ₹${rule.cap.toLocaleString("en-IN")})` : ""
+        effectiveCap ? ` (cap: ₹${effectiveCap.toLocaleString("en-IN")})` : ""
       }
 
 Document content:
@@ -220,11 +240,12 @@ financial year? Reply with ONLY a JSON object, no other text:
       }
     }
 
-    // 5. Statutory caps — each category's own, then the Section 80C cap
+    // 5. Statutory caps — each category's own (a confirmed org rule if one
+    //    exists, else the built-in default), then the Section 80C cap
     //    shared between lic_ppf_elss and home_loan_principal. Arithmetic,
     //    not judgment.
     for (const category of Object.keys(verified) as ProofCategory[]) {
-      const cap = PROOF_CATEGORY_RULES[category].cap;
+      const cap = capOverrides.get(category) ?? PROOF_CATEGORY_RULES[category].cap;
       if (cap && verified[category]! > cap) {
         verified[category] = cap;
       }
@@ -250,7 +271,13 @@ financial year? Reply with ONLY a JSON object, no other text:
     await logStep(db, {
       dutyInstanceId,
       capability: "reconcile",
-      input: { personId: decl.personId, regime: decl.regime, annualGross, totalExemptions },
+      input: {
+        personId: decl.personId,
+        regime: decl.regime,
+        annualGross,
+        totalExemptions,
+        capOverridesApplied: Object.fromEntries(capOverrides),
+      },
       output: { taxableIncome, annualTax, monthlyTds },
     });
 

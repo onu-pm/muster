@@ -23,9 +23,16 @@ sequence — see the Team screen entry below.
     (which teams an org has enabled).
   - `0004_tax_declarations.sql` — `tax_declarations`. Proof documents and
     their verification reuse `artifacts`/`verdicts` from 0001.
+  - `0005_calculation_rules.sql` — `rules.confirmed`/`confirmed_at`,
+    `exceptions.payload` (structured detail behind a proposed rule).
+  - `0006_rule_keys.sql` — `rules.rule_key`/`label`, so tested rule code
+    can find and validate a confirmed rule (see below), not just a human
+    reading the exception desk.
 - `src/lib/capabilities/` — Verify, Reconcile, Execute, plus per-agent
   deterministic rules: `wage-test.ts` (Structure), `tax-rates.ts` /
-  `proof-rules.ts` (Tax). Pursue is still a stub — see below.
+  `proof-rules.ts` (Tax), and `rules-lookup.ts` / `jurisdiction.ts` — how
+  those two look up and validate a confirmed org rule before falling back
+  to their own built-in defaults. Pursue is still a stub — see below.
 - `src/lib/agents/` — `input-agent.ts`, `structure-agent.ts`,
   `tax-agent.ts`, each triggered by its own route under
   `src/app/api/agents/`. No agent calls another directly; all
@@ -85,6 +92,32 @@ sequence — see the Team screen entry below.
 - Run, Compliance, Settlement, Query, Audit agents — the other five.
 - Only Payroll & Compliance exists as a real team; the dashboard's catalog
   (`teams` table) is built to hold more, but nothing else has been added.
+
+## Rules consumption
+
+`/rules-setup` (see below) captures a company's own calculation sheet as
+candidate rules, confirmed on the exception desk — but until now nothing
+read a confirmed rule back out. Structure's wage-definition test and Tax's
+proof-category caps now do, for a small, closed set of consumable
+`rule_key`s the extraction prompt already knows how to tag correctly:
+
+- `wage_definition` — overrides which salary components count toward the
+  statutory 50% test and the minimum ratio itself. Looked up per person,
+  scoped to their location's jurisdiction (falling back to
+  `IN-national`), with an as-of date.
+- `proof_category_cap` — overrides one Tax proof category's cap (Section
+  80C/80D/24(b) etc.). Always looked up at `IN-national` — these are
+  central-law provisions, not state-varying.
+
+A rule extracted with neither shape still gets captured and confirmable
+as before — it's just not wired to a calculation. **What this deliberately
+does NOT do:** compute a PT slab, a TDS slab, or anything not already
+tested code in `wage-test.ts`/`tax-rates.ts`/`proof-rules.ts` — adding
+that would be a new calculation engine, which the product's own rules
+don't allow an LLM extraction to author. See `capabilities/rules-lookup.ts`
+for the validation every confirmed rule goes through before a
+deterministic calculation trusts it (a confirmed row is still just data a
+human approved, not code).
 
 ## On the rate tables
 
