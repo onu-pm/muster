@@ -59,21 +59,27 @@ export function RulesSetupForm({ orgId }: { orgId: string }) {
   return (
     <div className="card" style={{ maxWidth: 640, marginTop: 16 }}>
       <label style={{ display: "block", marginBottom: 12 }}>
-        <div style={{ marginBottom: 4, fontSize: 13, color: "#666" }}>Default jurisdiction (e.g. IN-KA, IN-MH)</div>
+        <div className="text-muted" style={{ marginBottom: 4, fontSize: 13 }}>
+          Default jurisdiction (e.g. IN-KA, IN-MH)
+        </div>
         <input
+          className="field"
           value={jurisdiction}
           onChange={(e) => setJurisdiction(e.target.value)}
-          style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
+          style={{ width: "100%" }}
         />
       </label>
       <label style={{ display: "block", marginBottom: 12 }}>
-        <div style={{ marginBottom: 4, fontSize: 13, color: "#666" }}>Calculation sheet</div>
+        <div className="text-muted" style={{ marginBottom: 4, fontSize: 13 }}>
+          Calculation sheet
+        </div>
         <textarea
+          className="field"
           value={sheetText}
           onChange={(e) => setSheetText(e.target.value)}
           rows={12}
           placeholder={"e.g.\nKarnataka PT: up to 15000 = 0, 15001-25000 = 200, above 25000 = 300 monthly\nCTC breakup: Basic 40%, HRA 20%, Special allowance remainder\nLOP rounding: round to nearest half day"}
-          style={{ width: "100%", padding: 8, border: "1px solid #ccc", borderRadius: 6, fontFamily: "monospace", fontSize: 13 }}
+          style={{ width: "100%", fontFamily: "var(--font-mono)" }}
         />
       </label>
       {error && <p className="error-text">{error}</p>}

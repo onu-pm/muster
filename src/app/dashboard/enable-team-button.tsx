@@ -7,22 +7,31 @@ import { useRouter } from "next/navigation";
 export function EnableTeamButton({ teamKey }: { teamKey: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleClick() {
     setBusy(true);
+    setError(null);
     const res = await fetch(`/api/teams/${teamKey}/enable`, { method: "POST" });
     setBusy(false);
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      alert(body?.error ?? "Something went wrong.");
+      setError(body?.error ?? "Something went wrong.");
       return;
     }
     router.refresh();
   }
 
   return (
-    <button className="btn btn-primary" onClick={handleClick} disabled={busy}>
-      {busy ? "Enabling…" : "Enable"}
-    </button>
+    <div>
+      <button className="btn btn-primary" onClick={handleClick} disabled={busy}>
+        {busy ? "Enabling…" : "Enable"}
+      </button>
+      {error && (
+        <p className="error-text" style={{ marginTop: 8 }}>
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

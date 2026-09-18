@@ -133,11 +133,12 @@ export function GoalBox({ orgId, cycleLabel }: { orgId: string; cycleLabel: stri
         <div className="form-row">
           <input
             autoFocus
+            className="field"
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submit()}
             placeholder={`Run ${cycleLabel} payroll`}
-            style={{ flex: 1, padding: 10, border: "1px solid #ccc", borderRadius: 6 }}
+            style={{ flex: 1 }}
           />
           <button className="btn btn-primary" onClick={submit} disabled={!goal.trim()}>
             Send
