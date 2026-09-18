@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type Anthropic from "@anthropic-ai/sdk";
-import { llmClient, MODEL_ROUTINE } from "@/lib/llm/client";
+import { llmClient, callJudgmentModel, MODEL_ROUTINE } from "@/lib/llm/client";
 import { computeAnnualTax, NEW_REGIME_STANDARD_DEDUCTION, type Regime } from "@/lib/capabilities/tax-rates";
 import { PROOF_CATEGORY_RULES, checkDeterministic, type ProofCategory } from "@/lib/capabilities/proof-rules";
 import { logStep, openException } from "@/lib/capabilities/execute";
@@ -171,28 +170,23 @@ financial year? Reply with ONLY a JSON object, no other text:
 - "flagged": genuinely ambiguous — say why in "reason".
 - "confidence": 0 to 1. Use low confidence rather than guess.`;
 
-      const response = await anthropic.messages.create({
-        model: MODEL_ROUTINE,
-        // See structure-agent.ts — this provider spends tokens on thinking
-        // before the answer, and too tight a budget truncates the JSON.
-        max_tokens: 600,
-        messages: [{ role: "user", content: prompt }],
-      });
-
-      const text = response.content
-        .filter((b): b is Anthropic.TextBlock => b.type === "text")
-        .map((b) => b.text)
-        .join("");
+      // See structure-agent.ts — this provider spends tokens on thinking
+      // before the answer, and too tight a budget truncates the JSON.
+      // callJudgmentModel returns null on any network/shape failure (rate
+      // limit, transient error) rather than throwing.
+      const text = await callJudgmentModel(anthropic, { model: MODEL_ROUTINE, maxTokens: 600, prompt });
 
       let parsed: { outcome: "accepted" | "rejected" | "flagged"; confidence: number; reason: string } = {
         outcome: "flagged",
         confidence: 0,
         reason: "Model did not return a parseable judgment.",
       };
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        // Keep the safe default above — never guess.
+      if (text) {
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          // Keep the safe default above — never guess.
+        }
       }
 
       await verify(db, {

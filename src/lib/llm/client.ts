@@ -26,3 +26,34 @@ export function llmClient() {
  *  either via env var if you'd rather point at a paid model later. */
 export const MODEL_ROUTINE = process.env.MODEL_ROUTINE ?? "nvidia/nemotron-3-super-120b-a12b:free";
 export const MODEL_JUDGMENT = process.env.MODEL_JUDGMENT ?? "nvidia/nemotron-3-ultra-550b-a55b:free";
+
+/**
+ * One judgment call, with the network/shape failure handling every agent
+ * needs and none of them should duplicate: a rate limit, a transient
+ * upstream error, or a response with no text block all come back as null
+ * here rather than throwing — so one flaky call fails just the row it was
+ * judging (as "never guess"), not the whole duty. Errors are logged, not
+ * swallowed silently.
+ */
+export async function callJudgmentModel(
+  client: Anthropic,
+  args: { model: string; maxTokens: number; prompt: string }
+): Promise<string | null> {
+  try {
+    const response = await client.messages.create({
+      model: args.model,
+      max_tokens: args.maxTokens,
+      messages: [{ role: "user", content: args.prompt }],
+    });
+
+    const text = (response.content ?? [])
+      .filter((b): b is Anthropic.TextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+
+    return text || null;
+  } catch (err) {
+    console.error("[llm]", err);
+    return null;
+  }
+}

@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type Anthropic from "@anthropic-ai/sdk";
-import { llmClient, MODEL_ROUTINE } from "@/lib/llm/client";
+import { llmClient, callJudgmentModel, MODEL_ROUTINE } from "@/lib/llm/client";
 import { reconcile, type ReconcileRow } from "@/lib/capabilities/reconcile";
 import { logStep, openException } from "@/lib/capabilities/execute";
 
@@ -100,30 +99,23 @@ ONLY a JSON object, no other text: {"explanation": string | null, "confidence": 
 - "explanation": a one-sentence reason if the facts explain it, else null.
 - "confidence": 0 to 1. Use null and low confidence rather than guess.`;
 
-    const response = await anthropic.messages.create({
-      model: MODEL_ROUTINE,
-      // Generous headroom: this model spends tokens on thinking before the
-      // answer, and thinking tokens count against max_tokens — too tight a
-      // budget truncates the reply before the JSON is written, which
-      // silently reads back as "no explanation" (see structure-agent.ts).
-      max_tokens: 600,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const text = response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
+    // Generous max_tokens: this model spends tokens on thinking before the
+    // answer, and thinking tokens count against the budget — too tight a
+    // budget truncates the reply before the JSON is written (see
+    // structure-agent.ts). callJudgmentModel returns null on any network/
+    // shape failure (rate limit, transient error) rather than throwing.
+    const text = await callJudgmentModel(anthropic, { model: MODEL_ROUTINE, maxTokens: 600, prompt });
 
     let parsed: { explanation: string | null; confidence: number } = {
       explanation: null,
       confidence: 0,
     };
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      // Model didn't return clean JSON — treat as unexplained, never guess.
-      parsed = { explanation: null, confidence: 0 };
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        // Model didn't return clean JSON — treat as unexplained, never guess.
+      }
     }
 
     const explained =

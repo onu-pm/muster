@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type Anthropic from "@anthropic-ai/sdk";
-import { llmClient, MODEL_JUDGMENT } from "@/lib/llm/client";
+import { llmClient, callJudgmentModel, MODEL_JUDGMENT } from "@/lib/llm/client";
 import { checkWageDefinition, computeArrears, type SalaryStructure } from "@/lib/capabilities/wage-test";
 import { logStep, openException } from "@/lib/capabilities/execute";
 
@@ -163,31 +162,24 @@ much, moved into basic or DA. Reply with ONLY a JSON object, no other text:
   null if the structure doesn't give you enough to propose one safely.
 - "confidence": 0 to 1. Use null and low confidence rather than guess.`;
 
-      const response = await anthropic.messages.create({
-        model: MODEL_JUDGMENT,
-        // Generous headroom: this provider route gives Sonnet extended
-        // thinking on harder prompts like this one, and thinking tokens
-        // count against max_tokens — too tight a budget truncates the
-        // answer before the JSON is written, which silently reads back as
-        // "no explanation" (see the max_tokens=300 case in the build notes).
-        max_tokens: 1024,
-        messages: [{ role: "user", content: prompt }],
-      });
-
-      const text = response.content
-        .filter((b): b is Anthropic.TextBlock => b.type === "text")
-        .map((b) => b.text)
-        .join("");
+      // Generous max_tokens: this provider route gives the model extended
+      // thinking on harder prompts like this one, and thinking tokens count
+      // against the budget — too tight a budget truncates the answer before
+      // the JSON is written (see the max_tokens=300 case in the build
+      // notes). callJudgmentModel returns null on any network/shape
+      // failure (rate limit, transient error) rather than throwing.
+      const text = await callJudgmentModel(anthropic, { model: MODEL_JUDGMENT, maxTokens: 1024, prompt });
 
       let parsed: { correction: string | null; confidence: number } = {
         correction: null,
         confidence: 0,
       };
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        // Model didn't return clean JSON — treat as unproposed, never guess.
-        parsed = { correction: null, confidence: 0 };
+      if (text) {
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          // Model didn't return clean JSON — treat as unproposed, never guess.
+        }
       }
 
       await logStep(db, {
