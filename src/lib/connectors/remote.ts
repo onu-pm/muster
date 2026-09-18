@@ -12,14 +12,22 @@
  *                         default here) or https://gateway.remote.com
  *                         (production).
  *
- * A note on the endpoint paths below: Remote's own reference pages
- * (developer.remote.com/reference/get_index_employment and
- * .../get_index_timeoff) are JS-rendered and didn't yield the literal path
- * string during research — `/v1/employments` and `/v1/timeoff` are the
- * well-reasoned best guess from the `v1`-versioned gateway and the
- * "list/index" naming, not a confirmed value. The first real call against
- * the sandbox (once REMOTE_API_TOKEN is set) confirms or corrects this in
- * one round trip — a 404 here is the first thing to check, not a deeper bug.
+ * Verified 2026-09-18 with a live GET against both endpoints (empty
+ * company, so shape only — zero real rows to check the mapping logic
+ * against):
+ * - Paths are correct: `/v1/employments` and `/v1/timeoff` both 200, not
+ *   404. The original comment here called these a best guess — they
+ *   weren't wrong, just unconfirmed until now.
+ * - The response envelope was wrong, though. Both endpoints actually
+ *   return `{ data: { total_count, current_page, total_pages, <key> } }`
+ *   — a nested object, not `{ data: T[], has_more }` as first assumed.
+ *   The array itself is keyed by the resource name, plural:
+ *   `employments` on /v1/employments, `timeoffs` (plural, even though
+ *   the path is singular) on /v1/timeoff.
+ * - Pagination turned out to be uniform after all — both use the same
+ *   page/page_size request params and total_pages/current_page response
+ *   fields, not a has_more flag. The "might not be uniform" concern in
+ *   Remote's docs didn't apply to these two.
  */
 
 interface RemoteEmployment {
@@ -49,9 +57,18 @@ interface RemoteTimeOff {
   approved_at?: string;
 }
 
-interface RemotePage<T> {
-  data: T[];
-  has_more?: boolean;
+interface RemotePagination {
+  total_count: number;
+  current_page: number;
+  total_pages: number;
+}
+
+interface RemoteEmploymentsResponse {
+  data: RemotePagination & { employments: RemoteEmployment[] };
+}
+
+interface RemoteTimeOffResponse {
+  data: RemotePagination & { timeoffs: RemoteTimeOff[] };
 }
 
 function remoteConfig() {
@@ -66,10 +83,7 @@ export function remoteConfigured(): boolean {
   return Boolean(remoteConfig().token);
 }
 
-async function remoteGet<T>(
-  path: string,
-  params: Record<string, string | number | undefined> = {}
-): Promise<RemotePage<T>> {
+async function remoteGet<T>(path: string, params: Record<string, string | number | undefined> = {}): Promise<T> {
   const { token, baseUrl } = remoteConfig();
   if (!token) throw new Error("REMOTE_API_TOKEN is not set.");
 
@@ -94,12 +108,12 @@ export async function listEmployments(): Promise<RemoteEmployment[]> {
   const all: RemoteEmployment[] = [];
   let page = 1;
   for (;;) {
-    const result = await remoteGet<RemoteEmployment>("/v1/employments", { page, page_size: 100 });
-    const batch = result.data ?? [];
-    all.push(...batch);
-    if (!result.has_more || batch.length === 0) break;
+    const result = await remoteGet<RemoteEmploymentsResponse>("/v1/employments", { page, page_size: 100 });
+    const { employments, current_page, total_pages } = result.data;
+    all.push(...employments);
+    if (current_page >= total_pages || employments.length === 0) break;
     page += 1;
-    if (page > 20) break; // sane upper bound for a sandbox demo company
+    if (page > 20) break; // sane upper bound for a demo company
   }
   return all;
 }
@@ -111,10 +125,10 @@ export async function listTimeOff(): Promise<RemoteTimeOff[]> {
   const all: RemoteTimeOff[] = [];
   let page = 1;
   for (;;) {
-    const result = await remoteGet<RemoteTimeOff>("/v1/timeoff", { page, page_size: 100 });
-    const batch = result.data ?? [];
-    all.push(...batch);
-    if (!result.has_more || batch.length === 0) break;
+    const result = await remoteGet<RemoteTimeOffResponse>("/v1/timeoff", { page, page_size: 100 });
+    const { timeoffs, current_page, total_pages } = result.data;
+    all.push(...timeoffs);
+    if (current_page >= total_pages || timeoffs.length === 0) break;
     page += 1;
     if (page > 20) break;
   }

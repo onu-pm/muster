@@ -29,6 +29,14 @@ import type { InputAgentRow } from "@/lib/agents/input-agent";
  * is Mon-Fri only, so a cycle spanning a local holiday will show a
  * harmless day or two of drift on every employee until that's added
  * (the Rules/Calendar store in the Org Brain is where that belongs).
+ *
+ * Verification status: the live account behind REMOTE_API_TOKEN confirms
+ * the response envelope and pagination (see remote.ts's top comment) but
+ * currently has zero employments/timeoff records, so the individual
+ * field names below — full_name, status values, timeoff_days' shape —
+ * are still the original best guess from Remote's schema docs, not
+ * checked against a real row. Re-verify this file once real employee
+ * data exists in the account.
  */
 export async function buildRemoteAttendanceRows(args: {
   cycleStart: Date;

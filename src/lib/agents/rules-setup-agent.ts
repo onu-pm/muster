@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type Anthropic from "@anthropic-ai/sdk";
-import { llmClient, MODEL_JUDGMENT } from "@/lib/llm/client";
+import { llmClient, callJudgmentModel, MODEL_JUDGMENT } from "@/lib/llm/client";
 import { logStep, openException } from "@/lib/capabilities/execute";
 
 export interface RulesSetupResult {
@@ -80,16 +79,11 @@ Return an empty array if nothing extractable is found — never guess to
 produce output.`;
 
   const anthropic = llmClient();
-  const response = await anthropic.messages.create({
-    model: MODEL_JUDGMENT, // parsing a whole sheet correctly matters more than cost here
-    max_tokens: 2000,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const text = response.content
-    .filter((b): b is Anthropic.TextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("");
+  // parsing a whole sheet correctly matters more than cost here. Same
+  // callJudgmentModel guard as every other agent (see input-agent.ts) —
+  // a rate limit or transient error here returns null instead of
+  // throwing, so it reads back as zero candidates, not a 500.
+  const text = await callJudgmentModel(anthropic, { model: MODEL_JUDGMENT, maxTokens: 2000, prompt });
 
   let candidates: Array<{
     label: string;
@@ -98,12 +92,13 @@ produce output.`;
     definition: Record<string, unknown>;
     confidence: number;
   }> = [];
-  try {
-    const parsed = JSON.parse(text);
-    if (Array.isArray(parsed)) candidates = parsed;
-  } catch {
-    // Model didn't return clean JSON — zero candidates, never guess.
-    candidates = [];
+  if (text) {
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) candidates = parsed;
+    } catch {
+      // Model didn't return clean JSON — zero candidates, never guess.
+    }
   }
 
   await logStep(db, {
