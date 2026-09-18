@@ -49,28 +49,28 @@ export default function SignUpPage() {
   }
 
   return (
-    <div style={{ maxWidth: 360 }}>
+    <div className="auth-shell">
       <h1>Sign up</h1>
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <form onSubmit={handleSubmit} className="form-stack">
         <input
           type="email"
           required
+          className="field"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={{ padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
         />
         <input
           type="password"
           required
           minLength={6}
+          className="field"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={{ padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
         />
-        {error && <p style={{ color: "crimson", margin: 0 }}>{error}</p>}
-        <button type="submit" disabled={busy}>
+        {error && <p className="error-text">{error}</p>}
+        <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy ? "Creating account…" : "Sign up"}
         </button>
       </form>

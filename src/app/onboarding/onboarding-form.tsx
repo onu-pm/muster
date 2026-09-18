@@ -33,16 +33,16 @@ export function OnboardingForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 360 }}>
+    <form onSubmit={handleSubmit} className="form-stack auth-shell">
       <input
         required
+        className="field"
         placeholder="Organisation name"
         value={orgName}
         onChange={(e) => setOrgName(e.target.value)}
-        style={{ padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
       />
-      {error && <p style={{ color: "crimson", margin: 0 }}>{error}</p>}
-      <button type="submit" disabled={busy || !orgName}>
+      {error && <p className="error-text">{error}</p>}
+      <button type="submit" className="btn btn-primary" disabled={busy || !orgName}>
         {busy ? "Creating…" : "Create organisation"}
       </button>
     </form>

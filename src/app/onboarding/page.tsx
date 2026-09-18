@@ -27,7 +27,7 @@ export default async function OnboardingPage() {
   return (
     <div>
       <h1>Name your organisation</h1>
-      <p style={{ color: "#666" }}>This is the workspace your AI teams will operate in.</p>
+      <p className="text-muted">This is the workspace your AI teams will operate in.</p>
       <OnboardingForm />
     </div>
   );

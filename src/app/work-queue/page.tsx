@@ -27,29 +27,31 @@ export default async function WorkQueuePage() {
     .limit(50);
 
   if (error) {
-    return <p style={{ color: "crimson" }}>Could not load the work queue: {error.message}</p>;
+    return <p className="error-text">Could not load the work queue: {error.message}</p>;
   }
 
   return (
     <div>
       <h1>Work queue</h1>
-      {(!duties || duties.length === 0) && <p>Nothing in flight yet. Run the Input agent to see it here.</p>}
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 16 }}>
+      {(!duties || duties.length === 0) && (
+        <p className="text-muted">Nothing in flight yet. Run the Input agent to see it here.</p>
+      )}
+      <table className="table">
         <thead>
-          <tr style={{ textAlign: "left", borderBottom: "1px solid #ddd" }}>
-            <th style={{ padding: 8 }}>Duty</th>
-            <th style={{ padding: 8 }}>State</th>
-            <th style={{ padding: 8 }}>Opened</th>
-            <th style={{ padding: 8 }}>Due</th>
+          <tr>
+            <th>Duty</th>
+            <th>State</th>
+            <th>Opened</th>
+            <th>Due</th>
           </tr>
         </thead>
         <tbody>
           {duties?.map((d) => (
-            <tr key={d.id} style={{ borderBottom: "1px solid #eee" }}>
-              <td style={{ padding: 8 }}>{d.duty_type}</td>
-              <td style={{ padding: 8 }}>{d.state}</td>
-              <td style={{ padding: 8 }}>{new Date(d.opened_at).toLocaleString()}</td>
-              <td style={{ padding: 8 }}>{d.due_at ? new Date(d.due_at).toLocaleString() : "—"}</td>
+            <tr key={d.id}>
+              <td>{d.duty_type}</td>
+              <td>{d.state}</td>
+              <td>{new Date(d.opened_at).toLocaleString()}</td>
+              <td>{d.due_at ? new Date(d.due_at).toLocaleString() : "—"}</td>
             </tr>
           ))}
         </tbody>

@@ -1,0 +1,186 @@
+/* Design tokens, pulled from runner.now's computed styles. 'Exposure' is a
+   paid commercial typeface — left as Georgia, Runner's own fallback, rather
+   than adding a paid font or a free substitute that wouldn't match exactly.
+   'Geist'/'Geist Mono' are wired in via next/font in layout.tsx, which sets
+   --font-geist-sans / --font-geist-mono on <html> — referenced below. */
+:root {
+  --bg: #fcfcfa;
+  --bg-dark: #411b13;
+  --text: #252116;
+  --text-on-dark: #ffffff;
+  --accent: #c47957;
+  --accent-soft: #b66c4d;
+  --font-display: Georgia, serif;
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+
+  --border: #e2ddd4;
+  --border-soft: #ede8df;
+  --surface: #ffffff;
+  --muted: #746b5c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+}
+
+a {
+  color: var(--accent-soft);
+}
+
+/* Shell */
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.nav-brand {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.nav-spacer {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-email {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.main {
+  padding: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* Components */
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--surface);
+}
+
+.card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.card-muted {
+  background: var(--border-soft);
+  opacity: 0.6;
+}
+
+.tag {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.error-text {
+  color: #b3261e;
+  margin: 0;
+}
+
+.btn {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-dark);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.field {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row {
+  display: flex;
+  gap: 8px;
+}
+
+.auth-shell {
+  max-width: 360px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+}
+
+.table th {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border-soft);
+}

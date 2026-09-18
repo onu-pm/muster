@@ -35,18 +35,19 @@ export function DecideButtons({ exceptionId, orgId }: { exceptionId: string; org
 
   if (correcting) {
     return (
-      <div style={{ display: "flex", gap: 8 }}>
+      <div className="form-row">
         <input
           autoFocus
+          className="field"
           placeholder="What did it get wrong?"
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          style={{ flex: 1, padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
+          style={{ flex: 1 }}
         />
-        <button disabled={busy || !note} onClick={() => decide("corrected", note)}>
+        <button className="btn btn-primary" disabled={busy || !note} onClick={() => decide("corrected", note)}>
           Save correction
         </button>
-        <button disabled={busy} onClick={() => setCorrecting(false)}>
+        <button className="btn" disabled={busy} onClick={() => setCorrecting(false)}>
           Cancel
         </button>
       </div>
@@ -54,14 +55,14 @@ export function DecideButtons({ exceptionId, orgId }: { exceptionId: string; org
   }
 
   return (
-    <div style={{ display: "flex", gap: 8 }}>
-      <button disabled={busy} onClick={() => decide("approved")}>
+    <div className="form-row">
+      <button className="btn btn-primary" disabled={busy} onClick={() => decide("approved")}>
         Approve
       </button>
-      <button disabled={busy} onClick={() => decide("rejected")}>
+      <button className="btn" disabled={busy} onClick={() => decide("rejected")}>
         Reject
       </button>
-      <button disabled={busy} onClick={() => setCorrecting(true)}>
+      <button className="btn" disabled={busy} onClick={() => setCorrecting(true)}>
         Correct…
       </button>
     </div>

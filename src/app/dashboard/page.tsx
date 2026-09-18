@@ -31,39 +31,28 @@ export default async function DashboardPage() {
   const enabledTeamIds = new Set((enablement ?? []).filter((e) => e.enabled).map((e) => e.team_id));
 
   if (teamsError) {
-    return <p style={{ color: "crimson" }}>Could not load the team catalog: {teamsError.message}</p>;
+    return <p className="error-text">Could not load the team catalog: {teamsError.message}</p>;
   }
 
   return (
     <div>
       <h1>{org!.orgName}</h1>
-      <p style={{ color: "#666" }}>Choose a team to enable or enter.</p>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+      <p className="text-muted">Choose a team to enable or enter.</p>
+      <div className="card-list">
         {teams?.map((team) => {
           const enabled = enabledTeamIds.has(team.id);
           const comingSoon = team.status === "coming_soon";
           return (
-            <div
-              key={team.id}
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: 8,
-                padding: 16,
-                background: comingSoon ? "#f2f2f3" : "#fff",
-                opacity: comingSoon ? 0.6 : 1,
-              }}
-            >
+            <div key={team.id} className={`card${comingSoon ? " card-muted" : ""}`}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <strong>{team.name}</strong>
-                {comingSoon && <span style={{ fontSize: 12, color: "#888" }}>COMING SOON</span>}
+                {comingSoon && <span className="tag">Coming soon</span>}
               </div>
-              <p style={{ margin: "8px 0", color: "#555" }}>{team.description}</p>
+              <p style={{ margin: "8px 0" }} className={comingSoon ? "" : "text-muted"}>
+                {team.description}
+              </p>
               {!comingSoon &&
-                (enabled ? (
-                  <a href="/work-queue">Enter workspace →</a>
-                ) : (
-                  <EnableTeamButton teamKey={team.key} />
-                ))}
+                (enabled ? <a href="/work-queue">Enter workspace →</a> : <EnableTeamButton teamKey={team.key} />)}
             </div>
           );
         })}

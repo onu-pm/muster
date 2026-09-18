@@ -21,7 +21,7 @@ export function EnableTeamButton({ teamKey }: { teamKey: string }) {
   }
 
   return (
-    <button onClick={handleClick} disabled={busy}>
+    <button className="btn btn-primary" onClick={handleClick} disabled={busy}>
       {busy ? "Enabling…" : "Enable"}
     </button>
   );

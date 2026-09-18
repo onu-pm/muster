@@ -31,19 +31,19 @@ export default async function ExceptionDeskPage() {
     .limit(50);
 
   if (error) {
-    return <p style={{ color: "crimson" }}>Could not load the exception desk: {error.message}</p>;
+    return <p className="error-text">Could not load the exception desk: {error.message}</p>;
   }
 
   return (
     <div>
       <h1>Exception desk</h1>
-      {(!exceptions || exceptions.length === 0) && <p>Clear. Nothing waiting on a decision.</p>}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+      {(!exceptions || exceptions.length === 0) && <p className="text-muted">Clear. Nothing waiting on a decision.</p>}
+      <div className="card-list">
         {exceptions?.map((e: any) => (
-          <div key={e.id} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16, background: "#fff" }}>
-            <div style={{ fontSize: 12, color: "#888", textTransform: "uppercase" }}>{e.kind}</div>
+          <div key={e.id} className="card">
+            <div className="tag">{e.kind}</div>
             <p style={{ margin: "8px 0" }}>{e.conclusion}</p>
-            <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
+            <div className="text-muted" style={{ fontSize: 13, marginBottom: 12 }}>
               Confidence: {(e.confidence * 100).toFixed(0)}%
             </div>
             <DecideButtons exceptionId={e.id} orgId={e.duty_instances?.org_id} />
