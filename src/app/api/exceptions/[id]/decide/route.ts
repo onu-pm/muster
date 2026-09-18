@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { supabaseSession, currentOrg } from "@/lib/supabase/session";
 
 /**
  * POST /api/exceptions/:id/decide
@@ -19,6 +20,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: "outcome and orgId are required." }, { status: 400 });
   }
 
+  // A decision is a human acting for a specific org — trust the session for
+  // who's asking, not just whatever orgId the client happened to send.
+  const session = await supabaseSession();
+  const org = await currentOrg(session);
+  if (!org || org.orgId !== body.orgId) {
+    return NextResponse.json({ error: "Not signed in as a member of this organisation." }, { status: 401 });
+  }
+
   const db = supabaseAdmin();
 
   // Postgres function would be cleaner for true atomicity; a v1 slice does
@@ -28,6 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     .from("decisions")
     .insert({
       exception_id: exceptionId,
+      human_user_id: org.userId,
       outcome: body.outcome,
       correction_note: body.correctionNote ?? null,
     })

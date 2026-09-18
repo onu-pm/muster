@@ -102,7 +102,11 @@ ONLY a JSON object, no other text: {"explanation": string | null, "confidence": 
 
     const response = await anthropic.messages.create({
       model: MODEL_ROUTINE,
-      max_tokens: 200,
+      // Generous headroom: this model spends tokens on thinking before the
+      // answer, and thinking tokens count against max_tokens — too tight a
+      // budget truncates the reply before the JSON is written, which
+      // silently reads back as "no explanation" (see structure-agent.ts).
+      max_tokens: 600,
       messages: [{ role: "user", content: prompt }],
     });
 

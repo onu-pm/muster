@@ -1,4 +1,5 @@
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { supabaseSession, currentOrg } from "@/lib/supabase/session";
 import { DecideButtons } from "./decide-buttons";
 
 export const dynamic = "force-dynamic";
@@ -8,9 +9,20 @@ export const dynamic = "force-dynamic";
  * Everything needing a human decision: what the agent concluded, its
  * confidence, and one action that both resolves the exception and writes
  * a Fact when the human corrects it — the correction loop, made real.
+ *
+ * Reads through the signed-in user's own session (not supabaseAdmin), so
+ * Row Level Security scopes this to their organisation automatically.
  */
 export default async function ExceptionDeskPage() {
-  const db = supabaseAdmin();
+  const db = await supabaseSession();
+  const org = await currentOrg(db);
+  if (!org) {
+    const {
+      data: { user },
+    } = await db.auth.getUser();
+    redirect(user ? "/onboarding" : "/sign-in");
+  }
+
   const { data: exceptions, error } = await db
     .from("exceptions")
     .select("id, kind, conclusion, confidence, status, opened_at, duty_instance_id, duty_instances(org_id)")

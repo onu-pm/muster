@@ -1,16 +1,25 @@
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { supabaseSession, currentOrg } from "@/lib/supabase/session";
 
 export const dynamic = "force-dynamic";
 
 /**
  * Screen 2 — Work queue. Every duty instance in flight: what stage it's
- * at, what it's waiting on, the deadline. Uses the admin client directly
- * for now — no login flow exists yet, so this is single-tenant until
- * Supabase Auth + org_members is wired into the UI (RLS is already in
- * place in the schema for when it is).
+ * at, what it's waiting on, the deadline. Reads through the signed-in
+ * user's own session (not supabaseAdmin), so Row Level Security scopes
+ * this to their organisation automatically — no manual org_id filter
+ * needed, RLS does it.
  */
 export default async function WorkQueuePage() {
-  const db = supabaseAdmin();
+  const db = await supabaseSession();
+  const org = await currentOrg(db);
+  if (!org) {
+    const {
+      data: { user },
+    } = await db.auth.getUser();
+    redirect(user ? "/onboarding" : "/sign-in");
+  }
+
   const { data: duties, error } = await db
     .from("duty_instances")
     .select("id, duty_type, state, opened_at, due_at, org_id")
