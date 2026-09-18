@@ -7,7 +7,9 @@ the same way: reconcile deterministically, spend a model call only on the
 judgment part, and put anything uncertain on the exception desk.
 
 Payroll & Compliance is the one team with real agents behind it so far —
-Input, Structure, and Tax.
+Input, Structure, and Tax. Its home screen (`/team`) shows what it's
+working on and has a "Run a cycle" button that calls the three in
+sequence — see the Team screen entry below.
 
 ## What's here
 
@@ -36,9 +38,20 @@ Input, Structure, and Tax.
   writes behind sign-up: create an org (and make the signer its first
   member), and turn a team on for it.
 - Screens: `sign-up`, `sign-in`, `onboarding`, `dashboard` (team picker),
-  `work-queue`, `exception-desk`. The last two read through the signed-in
-  user's own session, not the admin client — Row Level Security scopes
-  them to the right org automatically.
+  `team` (Screen 1 from the build doc — "Holly's home": what she owns,
+  what's in flight, this month's counts, and "Run a cycle"), `work-queue`,
+  `exception-desk`. All four post-onboarding screens read through the
+  signed-in user's own session, not the admin client — Row Level Security
+  scopes them to the right org automatically. `/` redirects to `/team`
+  once Payroll & Compliance is enabled, else to `/dashboard`.
+- `src/lib/connectors/remote.ts`, `remote-sync.ts` — an optional Remote.com
+  connector. When `REMOTE_API_TOKEN` is set, the Input agent's route pulls
+  real employment and time-off data from Remote instead of reconciling an
+  empty batch — see the comment at the top of `remote-sync.ts` for exactly
+  what it treats as "attendance" vs. "leave" when Remote is the only
+  source behind it (there's no separate swipe-machine system for an EOR
+  platform, so it isn't a literal attendance-vs-leave comparison). Not yet
+  live-tested against a real sandbox token — see "Trying it" below.
 - `src/app/globals.css` — the design tokens (colors, type) as CSS custom
   properties, wired into `layout.tsx` with `next/font` for Geist/Geist
   Mono. One shared source, not styles repeated per page.
@@ -51,10 +64,22 @@ Input, Structure, and Tax.
   channel is the WhatsApp Business Platform API through an Indian BSP
   (Gupshup / Interakt / Wati) — nothing to build against until that
   account exists.
-- **No document ingestion.** Every agent takes structured numbers directly
-  in its API call — attendance/leave (Input), proof "document summaries"
-  standing in for OCR (Tax) — rather than parsing real files. Nothing
-  pulls from a real attendance system or reads an actual uploaded PDF yet.
+- **No document ingestion.** Structure and Tax still take structured
+  numbers directly in their API call rather than parsing real files —
+  proof "document summaries" stand in for OCR (Tax). Input can now pull
+  real numbers from Remote.com (see above) instead of a manual call, but
+  nothing reads an actual uploaded PDF yet.
+- **The Remote.com connector's endpoint paths are unverified.** Remote's
+  reference docs are JS-rendered and didn't yield the literal path string
+  during research; `/v1/employments` and `/v1/timeoff` are the
+  well-reasoned guess. The first real call against the sandbox confirms
+  or corrects this — check `src/lib/connectors/remote.ts`'s top comment
+  before assuming a failure there is a deeper bug.
+- **No goal input yet.** The Team screen's "Run a cycle" is a fixed
+  three-agent sequence, not the goal-driven orchestrator in Section 5 of
+  the team-architecture doc (type a goal in plain language, it classifies
+  Cycle/Case/Question/Change and dispatches). That's next, once real data
+  is flowing through the sequence that exists.
 - **Tax agent v0 stops at monthly TDS projection.** Year-end true-up and
   Form 16 generation aren't built.
 - Run, Compliance, Settlement, Query, Audit agents — the other five.
@@ -99,10 +124,13 @@ truth, until a qualified professional signs off.
 ## Trying it
 
 Sign up, name an organisation, enable Payroll & Compliance from the
-dashboard, then hit the agent routes directly — the UI doesn't have forms
-for triggering agents yet, so `curl` stands in for "already pulled from
-the source system." Grab your org's id from Supabase (`organisations`
-table) after onboarding.
+dashboard — you'll land on `/team`. Click "Run a cycle" to call Input,
+Structure and Tax in sequence against whatever's on file (or against
+Remote.com, if `REMOTE_API_TOKEN` is set — see above).
+
+To test the Input agent by hand instead — or before a Remote.com token is
+wired up — hit its route directly. Grab your org's id from Supabase
+(`organisations` table) after onboarding.
 
 ```bash
 curl -X POST http://localhost:3000/api/agents/input \

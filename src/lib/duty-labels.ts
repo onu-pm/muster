@@ -32,3 +32,12 @@ export function describeDuty(args: { dutyType: string; state: string; openedAt: 
 export function currentCycleLabel(): string {
   return new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 }
+
+/** The current cycle's date range: the 1st of this month through today
+ * (month-to-date) — matches currentCycleLabel(). Used to window queries
+ * against a connected source (see lib/connectors/) for "this cycle". */
+export function currentCycleRange(): { start: Date; end: Date } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  return { start, end: now };
+}

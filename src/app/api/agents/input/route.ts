@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { runInputAgent, type InputAgentRow } from "@/lib/agents/input-agent";
+import { buildRemoteAttendanceRows } from "@/lib/connectors/remote-sync";
+import { remoteConfigured } from "@/lib/connectors/remote";
+import { currentCycleRange } from "@/lib/duty-labels";
 
 /**
  * POST /api/agents/input
@@ -14,6 +17,12 @@ import { runInputAgent, type InputAgentRow } from "@/lib/agents/input-agent";
  *     { "personId": "uuid", "personName": "Priya Rao", "attendanceDays": 22, "leaveDays": 21 }
  *   ]
  * }
+ *
+ * If `rows` is empty AND REMOTE_API_TOKEN is set, this pulls real rows
+ * from Remote.com for the current cycle instead of reconciling nothing —
+ * see lib/connectors/remote-sync.ts for exactly what "attendance" and
+ * "leave" mean when Remote is the source. Pass rows explicitly (as the
+ * README's curl example does) to bypass Remote and test by hand.
  *
  * This is Wave 1 — the reconciliation half of the Input agent only.
  * Pursuing contributors for inputs (capabilities/pursue.ts) is stubbed
@@ -34,8 +43,14 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    let effectiveRows = rows;
+    if (effectiveRows.length === 0 && remoteConfigured()) {
+      const { start, end } = currentCycleRange();
+      effectiveRows = await buildRemoteAttendanceRows({ cycleStart: start, cycleEnd: end });
+    }
+
     const db = supabaseAdmin();
-    const result = await runInputAgent(db, { orgId, cycleLabel, rows });
+    const result = await runInputAgent(db, { orgId, cycleLabel, rows: effectiveRows });
     return NextResponse.json(result);
   } catch (err) {
     console.error("[input-agent]", err);
