@@ -5,10 +5,12 @@ import { EnableTeamButton } from "./enable-team-button";
 export const dynamic = "force-dynamic";
 
 /**
- * Screen 1 — Dashboard. The team picker: every AI team on the platform,
- * which ones this org has turned on, and a way into the ones that are
- * enabled. Payroll & Compliance is the only 'available' team right now —
- * everything else in `teams` is a real future row, not a placeholder.
+ * The team picker: every AI team on the platform, which ones this org has
+ * turned on, and a way into the ones that are enabled. Payroll &
+ * Compliance is the only 'available' team right now — everything else in
+ * `teams` is a real future row, not a placeholder. Screen 1 itself is
+ * /team (Holly's home) — this page is reachable via "Dashboard" in the
+ * nav for enabling more teams as they exist.
  */
 export default async function DashboardPage() {
   const db = await supabaseSession();
@@ -52,7 +54,11 @@ export default async function DashboardPage() {
                 {team.description}
               </p>
               {!comingSoon &&
-                (enabled ? <a href="/work-queue">Enter workspace →</a> : <EnableTeamButton teamKey={team.key} />)}
+                (enabled ? (
+                  <a href="/team">Meet Holly →</a>
+                ) : (
+                  <EnableTeamButton teamKey={team.key} />
+                ))}
             </div>
           );
         })}

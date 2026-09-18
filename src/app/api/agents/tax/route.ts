@@ -37,11 +37,8 @@ export async function POST(req: NextRequest) {
   }
 
   const { orgId, cycleLabel, declarations } = body;
-  if (!orgId || !cycleLabel || !Array.isArray(declarations) || declarations.length === 0) {
-    return NextResponse.json(
-      { error: "orgId, cycleLabel and a non-empty declarations[] are required." },
-      { status: 400 }
-    );
+  if (!orgId || !cycleLabel || !Array.isArray(declarations)) {
+    return NextResponse.json({ error: "orgId, cycleLabel and declarations[] are required." }, { status: 400 });
   }
 
   try {

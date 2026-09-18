@@ -23,6 +23,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <span className="nav-brand">Muster</span>
           {user ? (
             <>
+              <a href="/team">Holly</a>
               <a href="/dashboard">Dashboard</a>
               <a href="/work-queue">Work queue</a>
               <a href="/exception-desk">Exception desk</a>

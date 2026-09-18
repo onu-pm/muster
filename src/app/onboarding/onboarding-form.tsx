@@ -28,7 +28,9 @@ export function OnboardingForm() {
       return;
     }
 
-    router.push("/dashboard");
+    // "/" decides where to land next — no team is enabled yet for a
+    // brand-new org, so this currently lands on the team picker.
+    router.push("/");
     router.refresh();
   }
 

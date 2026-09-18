@@ -29,11 +29,8 @@ export async function POST(req: NextRequest) {
   }
 
   const { orgId, cycleLabel, rows } = body;
-  if (!orgId || !cycleLabel || !Array.isArray(rows) || rows.length === 0) {
-    return NextResponse.json(
-      { error: "orgId, cycleLabel and a non-empty rows[] are required." },
-      { status: 400 }
-    );
+  if (!orgId || !cycleLabel || !Array.isArray(rows)) {
+    return NextResponse.json({ error: "orgId, cycleLabel and rows[] are required." }, { status: 400 });
   }
 
   try {

@@ -23,7 +23,8 @@ import { runStructureAgent, type StructureRevisionRow, type LoanRow } from "@/li
  *   ]
  * }
  *
- * Either array may be omitted or empty. The 50% wage-definition test and
+ * Either array may be omitted or empty — including both at once, e.g. a
+ * cycle with nothing to revise. The 50% wage-definition test and
  * arrear recomputation never call an LLM (capabilities/wage-test.ts) — a
  * model is spent only once a structure has already failed that test, to
  * propose a correction, exactly like the Input agent only spends a call on
@@ -38,11 +39,8 @@ export async function POST(req: NextRequest) {
   }
 
   const { orgId, cycleLabel, revisions = [], loans = [] } = body;
-  if (!orgId || !cycleLabel || (revisions.length === 0 && loans.length === 0)) {
-    return NextResponse.json(
-      { error: "orgId, cycleLabel and at least one of revisions[] or loans[] are required." },
-      { status: 400 }
-    );
+  if (!orgId || !cycleLabel) {
+    return NextResponse.json({ error: "orgId and cycleLabel are required." }, { status: 400 });
   }
 
   try {

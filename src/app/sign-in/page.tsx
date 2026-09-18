@@ -26,7 +26,9 @@ export default function SignInPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // "/" decides where to land — Holly's Team screen once a team is
+    // enabled, otherwise the team picker.
+    router.push("/");
     router.refresh();
   }
 
