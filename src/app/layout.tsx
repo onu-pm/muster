@@ -29,6 +29,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <a href="/exception-desk">Exception desk</a>
               <a href="/history">History</a>
               <a href="/import">Import CSV</a>
+              <a href="/org-brain">Org Brain</a>
               <a href="/rules-setup">Calculation rules</a>
               <span className="nav-spacer">
                 <span className="nav-email">{user.email}</span>
