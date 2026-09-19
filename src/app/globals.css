@@ -1,23 +1,41 @@
-/* Design tokens, pulled from runner.now's computed styles. 'Exposure' is a
-   paid commercial typeface — left as Georgia, Runner's own fallback, rather
-   than adding a paid font or a free substitute that wouldn't match exactly.
+/* Design tokens, v2 — redirected after watching a reference recording of
+   Grok Bot's desktop app: near-black background, cards separated by
+   background-lightness steps rather than border lines ("elevation," not
+   borders), large border-radius, sans-serif only, restrained color. Kept
+   Muster's own terracotta accent rather than switching to Grok's blue —
+   same modern structure, still Muster's identity. Dark is the only theme
+   for now (the reference showed no light mode); a light variant can come
+   later as an explicit ask, not a default this system has to carry.
+
    'Geist'/'Geist Mono' are wired in via next/font in layout.tsx, which sets
-   --font-geist-sans / --font-geist-mono on <html> — referenced below. */
+   --font-geist-sans / --font-geist-mono on <html> — referenced below.
+   --font-display used to be Georgia (a serif, from the original runner.now
+   tokens) — dropped in favour of sans-serif throughout, matching the
+   reference's one-typeface look. */
 :root {
-  --bg: #fcfcfa;
-  --bg-dark: #411b13;
-  --text: #252116;
-  --text-on-dark: #ffffff;
+  --bg: #0a0a0a;
+  --surface: #171717; /* cards — one elevation step up from --bg */
+  --surface-2: #212121; /* nested/hover surface — two steps up */
+  --surface-input: #141414; /* text inputs — slightly recessed, not elevated */
+
+  --text: #f2f2f0;
+  --text-on-dark: #ffffff; /* kept as a name: still the right text colour on --accent */
+  --muted: #8f8d88;
+
   --accent: #c47957;
-  --accent-soft: #b66c4d;
-  --font-display: Georgia, serif;
+  --accent-soft: #d99a78; /* lightened for hover on a dark surface — was a darker shade for light backgrounds before */
+
+  --divider: #262626; /* the one place a 1px line still appears — table rows */
+  --border-soft: #1c1c1c;
+
+  --font-display: var(--font-geist-sans), system-ui, sans-serif;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
 
-  --border: #e2ddd4;
-  --border-soft: #ede8df;
-  --surface: #ffffff;
-  --muted: #746b5c;
+  --radius-card: 16px;
+  --radius-control: 10px;
+
+  --error: #ff6b6b; /* brighter on dark than the old #b3261e, which read as near-black */
 }
 
 * {
@@ -35,6 +53,7 @@ h1,
 h2,
 h3 {
   font-family: var(--font-display);
+  font-weight: 600;
 }
 
 code,
@@ -53,13 +72,23 @@ a {
   align-items: center;
   gap: 24px;
   padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
   background: var(--surface);
+}
+
+.nav a {
+  color: var(--text);
+  opacity: 0.75;
+  text-decoration: none;
+}
+
+.nav a:hover {
+  opacity: 1;
 }
 
 .nav-brand {
   font-family: var(--font-display);
   font-size: 18px;
+  font-weight: 600;
 }
 
 .nav-spacer {
@@ -83,8 +112,7 @@ a {
 /* Components */
 
 .card {
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   padding: 16px;
   background: var(--surface);
 }
@@ -97,7 +125,7 @@ a {
 }
 
 .card-muted {
-  background: var(--border-soft);
+  background: var(--bg);
   opacity: 0.6;
 }
 
@@ -113,19 +141,23 @@ a {
 }
 
 .error-text {
-  color: #b3261e;
+  color: var(--error);
   margin: 0;
 }
 
 .btn {
   font-family: var(--font-sans);
   font-size: 14px;
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  padding: 8px 16px;
+  border-radius: var(--radius-control);
+  border: none;
+  background: var(--surface-2);
   color: var(--text);
   cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  background: #2a2a2a;
 }
 
 .btn:disabled {
@@ -135,7 +167,6 @@ a {
 
 .btn-primary {
   background: var(--accent);
-  border-color: var(--accent);
   color: var(--text-on-dark);
 }
 
@@ -146,11 +177,15 @@ a {
 .field {
   font-family: var(--font-sans);
   font-size: 14px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  border: none;
+  background: var(--surface-input);
   color: var(--text);
+}
+
+.field::placeholder {
+  color: var(--muted);
 }
 
 .form-stack {
@@ -177,7 +212,10 @@ a {
 .table th {
   text-align: left;
   padding: 8px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--divider);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .table td {

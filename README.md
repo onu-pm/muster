@@ -73,7 +73,15 @@ what you typed and, for a cycle, calls the three agents in sequence.
   and met with "not built yet," not a bluff.
 - `src/app/globals.css` — the design tokens (colors, type) as CSS custom
   properties, wired into `layout.tsx` with `next/font` for Geist/Geist
-  Mono. One shared source, not styles repeated per page.
+  Mono. One shared source, not styles repeated per page. Redirected after
+  watching a reference recording of Grok Bot's desktop app: near-black
+  background, cards separated by elevation (background-lightness steps)
+  rather than border lines, large border-radius, sans-serif only (dropped
+  the original Georgia serif headings) — kept Muster's own terracotta
+  accent rather than switching to Grok's blue. Dark is the only theme for
+  now; every page already reads color exclusively through these tokens
+  (confirmed by grepping the whole `src/` tree for hardcoded hex values
+  before and after), so this was a token-file change, not a per-page one.
 - `.claude/skills/india-payroll/` — the openaccountants reference skill
   the Tax agent's rate tables were checked against (see below).
 
